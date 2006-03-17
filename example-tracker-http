@@ -1,13 +1,14 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use strict;
+use lib q{lib};
 use GPS::gpsd;
 use Getopt::Std;
-use Report::http;
+use GPS::gpsd::Report::http;
 
 my $opt={};
 getopts('i:', $opt);
 
-my ($host,$port)=split(q{:}, shift());
+my ($host,$port)=split(q{:}, shift()||'');
 $host||=q{localhost};
 $port||=q{2947};
 
@@ -30,7 +31,8 @@ $gps->subscribe(handler=>\&gpsd_handler,
 sub report {
   my $point=shift();
   my $config=shift();
-  print join "|", $config->{'type'},
+  print join "|", map {defined $_?$_:''} 
+                  $config->{'type'},
                   $point->status,
                   $point->lat,
                   $point->lon,
@@ -38,8 +40,7 @@ sub report {
                   $point->speed,
                   $point->heading,
                   "\n";
-   use Report::http;
-   my $rpt=new Report::http;
+   my $rpt=GPS::gpsd::Report::http->new();
    my $return=$rpt->send({device=>$config->{'device'},
                           lat=>$point->lat,
                           lon=>$point->lon,

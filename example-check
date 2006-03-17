@@ -1,7 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use strict;
+use lib q{./lib};
 use GPS::gpsd;
-my ($host,$port)=split(q{:}, shift());
+my ($host,$port)=split(q{:}, shift()||'');
 $host||=q{localhost};
 $port||=q{2947};
 
@@ -11,7 +12,8 @@ print join("|", qw{status datetime . lat lon alt speed heading}), "\n";
 while (1) {
   my $p=$gps->get();
   if ($p->fix) {
-    print join("|", $p->status,
+    print join("|", map {defined $_?$_:''}
+                     $p->status,
                      $p->datetime,
                      $p->lat,
                      $p->lon,
@@ -19,7 +21,7 @@ while (1) {
                      $p->speed,
                      $p->heading),
                      "\n";
-    print join(":", @{$p->{'O'}}),"\n";
+    print join(":", map {defined $_?$_:''} @{$p->{'O'}}),"\n";
   }
   sleep 1;
 }

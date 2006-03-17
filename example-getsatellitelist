@@ -1,7 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use strict;
+use lib q{lib};
 use GPS::gpsd;
-my ($host,$port)=split(q{:}, shift());
+my ($host,$port)=split(q{:}, shift()||'');
 $host||=q{localhost};
 $port||=q{2947};
 

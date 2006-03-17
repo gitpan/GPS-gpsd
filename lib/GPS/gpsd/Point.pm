@@ -2,12 +2,12 @@
 #All rights reserved. This program is free software;
 #you can redistribute it and/or modify it under the same terms as Perl itself.
 
-package GPS::gpsd::point;
+package GPS::gpsd::Point;
 
 use strict;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.7} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.8} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -28,7 +28,7 @@ sub initialize {
 
 sub fix {
   my $self = shift();
-  return ($self->status > 0);
+  return $self->status ? 1 : 0;
 }
 
 sub status {
@@ -160,7 +160,7 @@ __END__
 
 =head1 NAME
 
-GPS::gpsd::point - Provides an object interface for a gps point.
+GPS::gpsd::Point - Provides an object interface for a gps point.
 
 =head1 SYNOPSIS
 
@@ -168,7 +168,7 @@ GPS::gpsd::point - Provides an object interface for a gps point.
  $gps = new GPS::gpsd(host => 'localhost',
                       port => 2947
                 );
- my $point=$gps->get(); #$point is a GPS::gpsd::point object
+ my $point=$gps->get(); #$point is a GPS::gpsd::Point object
  print $point->latitude, " ", $point->longitude, "\n";
 
 =head1 DESCRIPTION
@@ -269,6 +269,6 @@ Michael R. Davis, qw/gpsd michaelrdavis com/
 
 GPS::gpsd
 
-GPS::gpsd::satellite
+GPS::gpsd::Satellite
 
 =cut

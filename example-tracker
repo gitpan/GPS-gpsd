@@ -1,7 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use strict;
+use lib q{lib};
 use GPS::gpsd;
-my ($host,$port)=split(q{:}, shift());
+my ($host,$port)=split(q{:}, shift()||'');
 $host||=q{localhost};
 $port||=q{2947};
 
@@ -20,7 +21,8 @@ $gps->subscribe(handler=>\&gpsd_handler,
 sub report {
   my $data=shift();
   my $point=$data->{'point'};
-  print join "|", $data->{'type'},
+  print join "|", map {defined $_?$_:''}
+                  $data->{'type'},
                   $point->status,
                   $point->lat,
                   $point->lon,

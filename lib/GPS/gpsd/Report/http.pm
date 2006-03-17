@@ -2,7 +2,7 @@
 #All rights reserved. This program is free software;
 #you can redistribute it and/or modify it under the same terms as Perl itself.
 
-package Report::http;
+package GPS::gpsd::Report::http;
 
 use strict;
 use vars qw($VERSION);
@@ -49,12 +49,12 @@ __END__
 
 =head1 NAME
 
-Report::http - Provides a perl interface to report position data. 
+GPS::gpsd::Report::http - Provides a perl interface to report position data. 
 
 =head1 SYNOPSIS
 
- use Report::http;
- my $rpt=new Report::http();
+ use GPS::gpsd::Report::http;
+ my $rpt=new GPS::gpsd::Report::http();
  my $return=$rpt->send(\%data);
 
 =head1 DESCRIPTION

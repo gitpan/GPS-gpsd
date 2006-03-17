@@ -7,11 +7,10 @@ package GPS::gpsd;
 use strict;
 use vars qw($VERSION);
 use IO::Socket;
-use Math::Trig qw{rad2deg deg2rad great_circle_distance great_circle_destination};
-use GPS::gpsd::point;
-use GPS::gpsd::satellite;
+use GPS::gpsd::Point;
+use GPS::gpsd::Satellite;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.7} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.9} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -80,7 +79,7 @@ sub getsatellitelist {
   my @list = ();
   foreach (@data) {
     #print "$_\n";
-    push @list, GPS::gpsd::satellite->new(split " ", $_);
+    push @list, GPS::gpsd::Satellite->new(split " ", $_);
   }
   return @list;
 }
@@ -88,7 +87,7 @@ sub getsatellitelist {
 sub get {
   my $self=shift();
   my $data=$self->retrieve('SDO');
-  return GPS::gpsd::point->new($data);
+  return GPS::gpsd::Point->new($data);
 }
 
 sub retrieve {
@@ -153,50 +152,43 @@ sub time {
   return abs($p2->time - $p1->time);
 }
 
-sub math2geo {
-  return rad2deg($_[0]), (rad2deg($_[1]));
-}
-
-sub geo2math {
-  return deg2rad($_[0]), deg2rad(90 - $_[1]);
-}
-
 sub distance {
-  #meters between p1 and p2
+  #returns meters between p1 and p2
   my $self=shift();
   my $p1=shift();
   my $p2=shift();
-  my @P1 = geo2math( $p1->lat, $p1->lon);
-  my @P2 = geo2math( $p2->lat, $p2->lon);
-  return great_circle_distance(@P1, @P2, 6378000);
+  my $earth_polar_circumference_meters_per_degree=6356752.314245 * 2*&PI/360;
+  my $earth_equatorial_circumference_meters_per_degree=6378137 * 2*&PI/360;
+  my $delta_lat_degrees=$p2->lat - $p1->lat;
+  my $delta_lon_degrees=$p2->lon - $p1->lon;
+  my $delta_lat_meters=$delta_lat_degrees * $earth_polar_circumference_meters_per_degree;
+  my $delta_lon_meters=$delta_lon_degrees * $earth_equatorial_circumference_meters_per_degree * cos(($p1->lat + $delta_lat_degrees / 2) * &PI / 180);
+  #print $delta_lat_meters, ":",  $delta_lon_meters, "\n";
+  return sqrt($delta_lat_meters**2 + $delta_lon_meters**2);
 }
 
 sub track {
-  #return calculated point of $p1 in time assuming constant velocity
+ #return calculated point of $p1 in time assuming constant velocity
   my $self=shift();
   my $p1=shift();
   my $time=shift();
-  my $speed=$p1->speed;              #m/s
-  my $distance=$speed * $time;       #meters
-  $distance=meter2rad($distance);    #radians
-
-  my ($thetad, $phid, $dird) =
-    great_circle_destination(geo2math($p1->lat, $p1->lon),
-                               $p1->heading, $distance);
-
-  my $p2=GPS::gpsd::point->new($p1);
-  my ($lat, $lon)=math2geo($thetad, $phid);
-  $p2->lat($lat);
-  $p2->lon($lon);
+  my $distance_meters=$p1->speed * $time;   #meters
+  my $earth_polar_circumference_meters_per_degree=6356752.314245 * 2*&PI/360;
+  my $earth_equatorial_circumference_meters_per_degree=6378137 * 2*&PI/360 * cos($p1->lat*&PI/180);
+  my $distance_lat_meters=$distance_meters * sin($p1->heading*&PI/180);
+  my $distance_lon_meters=$distance_meters * cos($p1->heading*&PI/180);
+  #print  $distance_lat_meters, ":", $distance_lon_meters, "\n";
+  my $distance_lat_degrees=$distance_lat_meters
+                               / $earth_polar_circumference_meters_per_degree;
+  my $distance_lon_degrees=$distance_lon_meters
+                           / $earth_equatorial_circumference_meters_per_degree;
+  #print  $distance_lat_degrees, ":", $distance_lon_degrees, "\n";
+  my $p2=GPS::gpsd::Point->new($p1);
+  $p2->lat($p1->lat + $distance_lat_degrees);
+  $p2->lon($p1->lon + $distance_lon_degrees);
   $p2->time($p1->time + $time);
-  $p2->heading($dird);
+  #$p2->heading($dird); #what is the new heading?
   return $p2;
-}
-
-sub meter2rad {
-  my $m=shift();
-  my $e =(6378137 + 6356752.3142)/2;
-  return  2 * &PI * $m / $e;
 }
 
 sub PI {4 * atan2 1, 1;}

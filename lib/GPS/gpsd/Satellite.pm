@@ -2,12 +2,12 @@
 #All rights reserved. This program is free software;
 #you can redistribute it and/or modify it under the same terms as Perl itself.
 
-package GPS::gpsd::satellite;
+package GPS::gpsd::Satellite;
 
 use strict;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.7} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.8} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -79,7 +79,7 @@ __END__
 
 =head1 NAME
 
-GPS::gpsd::satellite - Provides an interface for a gps satellite object.
+GPS::gpsd::Satellite - Provides an interface for a gps satellite object.
 
 =head1 SYNOPSIS
 
@@ -147,6 +147,6 @@ Michael R. Davis, qw/gpsd michaelrdavis com/
 
 GPS::gpsd
 
-GPS::gpsd::point
+GPS::gpsd::Point
 
 =cut

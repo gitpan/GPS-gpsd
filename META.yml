@@ -1,13 +1,10 @@
 --- #YAML:1.0
 name:                GPS-gpsd
-version:             0.7
+version:             0.9
 abstract:            Provides a perl interface to the gpsd daemon.
 license:             perl
-generated_by:        Hand (Any help here?)
-author:              Michael R. Davis <perl ~ michaelrdavis ~ com>
 distribution_type:   module
 requires:     
     vars                           0
     strict                         0
     IO::Socket:                    0
-    Math::Trig:                    1.03

@@ -1,5 +1,11 @@
 Revision history for GPS::gpsd
 
+2006-03-15 v0.8
+  * CPAN changes.  Now automakes with CPAN!
+  * moved Report::http under gpsd namespace
+  * moved modules to the lib folder
+  * renamed tgz file to GPS-gpsd-X.XX.tgz format
+
 2006-03-11 v0.7
   * Fixes error in in the parse routine 
      < $data{$1}=[split(/ /, $2)];
@@ -10,7 +16,7 @@ Revision history for GPS::gpsd
 
 2006-02-23 v0.6 (No user interface changes)
   * Updates the pod documentation so that it displays better on CPAN.
-  * Moved code from GPS::gpsd::satellite->list to GPS::gpsd->getsatellitelist. 
+  * Moved code from GPS::gpsd::Satellite->list to GPS::gpsd->getsatellitelist. 
   * Documentation, Documentation, Documentation...
 
 2006-02-22 v0.5 (Heavy user interface changes)
