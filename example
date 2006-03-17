@@ -1,22 +1,40 @@
 #!/usr/bin/perl
 use strict;
-use lib './perl-GPS-gpsd-0.1';
+use lib './perl-GPS-gpsd-0.2';
 use GPS::gpsd;
+use vars qw{$last $config};
 
-my $gps=GPS::gpsd->new(host=>'192.168.33.130',
-                       port=>2947);
-my $data=$gps->get('SDPTVAEL');
-my %fix=('?'=>"Error", 0=>"No Fix", 1=>"Fix", 2=>"DGPS-Corrected Fix");
+my $gps=GPS::gpsd->new(host=>'192.168.33.130');
 print "gpsd.pm Version:", $gps->VERSION, "\n";
-print "gpsd Version:", $data->{'L'}->[1], "\n";
-print "Fix:", $data->{'S'}->[0], "=", $fix{$data->{'S'}->[0]}, "\n";
-print "Lat:", $data->{'P'}->[0], " Lon:", $data->{'P'}->[1], "\n";
-print "Host:", $gps->host, " Port:", $gps->port, "\n";
 
-$gps->register(sub=>\&gpsd_handler,
-               send=>'SDPTVAE');
+$last=undef();
+$config={
+          time=>5,       #seconds
+          distance=>100, #meters
+          track=>20      #meters
+        };
 
-sub gpsd_handler {
+$gps->register(sub=>\&gps_handler,
+               filter=>\&gps_filter);
+
+sub gps_handler {
   my $data=shift();
-  print join " ", "Fix", $data->{'S'}->[0], $data->{'P'}->[0], $data->{'P'}->[1], "\n";
+  print join " ", "Fix", $data->{'S'}->[0],
+                         $data->{'D'}->[0], #datetime
+                         $data->{'P'}->[0], #latitude
+                         $data->{'P'}->[1], #longitude
+                         $data->{'A'}->[0], #altitude
+                         "\n";
+  $last=$data;
+}
+
+sub gps_filter {
+  #Not sure how to pass data into this proceedure other than via
+  #global vars since we are being called via a module
+  my $p1=$last;
+  my $p2=shift();
+  return (!defined($p1) or
+      $gps->time($p1, $p2) > $config->{'time'} or
+      $gps->distance($p1, $p2) > $config->{'distance'} or
+      $gps->distance($gps->track($p1, $p2), $p2) > $config->{'track'});
 }
