@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+use strict;
+use lib './perl-GPS-gpsd-0.1';
+use GPS::gpsd;
+
+my $gps=GPS::gpsd->new(host=>'192.168.33.130',
+                       port=>2947);
+my $data=$gps->get('SDPTVAEL');
+my %fix=('?'=>"Error", 0=>"No Fix", 1=>"Fix", 2=>"DGPS-Corrected Fix");
+print "gpsd.pm Version:", $gps->VERSION, "\n";
+print "gpsd Version:", $data->{'L'}->[1], "\n";
+print "Fix:", $data->{'S'}->[0], "=", $fix{$data->{'S'}->[0]}, "\n";
+print "Lat:", $data->{'P'}->[0], " Lon:", $data->{'P'}->[1], "\n";
+print "Host:", $gps->host, " Port:", $gps->port, "\n";
+
+$gps->register(sub=>\&gpsd_handler,
+               send=>'SDPTVAE');
+
+sub gpsd_handler {
+  my $data=shift();
+  print join " ", "Fix", $data->{'S'}->[0], $data->{'P'}->[0], $data->{'P'}->[1], "\n";
+}
