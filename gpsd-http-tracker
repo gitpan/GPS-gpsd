@@ -1,0 +1,109 @@
+#!/usr/bin/perl
+################################################################################
+#  Copyright 2005, 2006 Michael R. Davis (mrdvt92)                             #
+#  License: BSD                                                                #
+################################################################################
+use strict;
+use Getopt::Std;
+my $opt={};
+getopts('i:w:t:l:m:u:d:qh', $opt); 
+
+my ($host,$port)=split(q{:}, shift());
+$host||=q{localhost};
+$port||=q{2947};
+
+my $config={
+  i=>2 ** 15 + int(rand(2 ** 15)), #device identification
+  w=>5,                            #wait between tests 
+  t=>900,                          #maximum time tolerance
+  l=>1000,                         #maximum location tolerance
+  m=>200,                          #maximum track (moveing) tolerance
+  u=>'http://maps.davisnetworks.com/tracking/position_report.cgi',
+  d=>0,                            #debug level integer
+  q=>undef(),                      #quite
+  h=>undef(),                      #help
+
+  display=>'http://maps.davisnetworks.com/tracking/display_device.cgi?device='
+};
+
+if ($opt->{'h'}) {
+  print qq{Syntax: $0 [-h | [-q] [-i integer] [-w seconds] [-t seconds] [-l meters] [-p meters] [-u url] [-s server] [-p port]]
+    # i device id [rand|},$config->{'i'},qq{]
+    # w wait between tests [},$config->{'w'},qq{] seconds
+    # t seconds tolerance [},$config->{'t'},qq{] seconds
+    # l locate tolerance [},$config->{'l'},qq{] meters
+    # p track tolerance [},$config->{'p'},qq{] meters
+    # d debug level [integer]
+    # q quite (for deamon mode)
+    # h help
+    # u url report [},$config->{'u'},qq{]
+    # gpsd server [},join(':', $config->{'gpsd_server'}, $config->{'gpsd_port'}),qq{]
+  };
+} else {
+
+  use GPS::gpsd;
+  my $gps=GPS::gpsd->new(host=>$host,port=>$port);
+
+  foreach (keys %$opt) {
+    $config->{$_}=$opt->{$_} if $opt->{$_};
+  }
+  $config->{'display'}.=$config->{'i'};
+
+  $gps->subscribe(handler=>\&handler);
+
+} # help of if help
+
+sub handler {
+  my $config=shift();
+  my $p1=shift();
+  my @update_type=qw(error start time dist track);
+  my $data={
+    i=>$config->{'i'},
+    lat=>$p1->{'P'}->[0],
+    lon=>$p1->{'P'}->[1],
+    dtg=>$p1->{'D'}->[0],
+    speed=>$p1->{'V'}->[0],  #need some "?" checking here
+    heading=>$p1->{'T'}->[0],  #need some "?" checking here
+    type=>$p1->{'_update_type'}->[0], #{1=>start,2=>time,3=>dist,4=>track}
+    quality=>$p1->{'E'}->[0] > 0 ? $p1->{'E'}->[0] : undef()
+  };
+  print "Report:",
+        join(":",
+          $update_type[$data->{'type'}],
+          $data->{'i'},
+          $data->{'lat'},
+          $data->{'lon'},
+          $data->{'dtg'}, 
+          $data->{'speed'}, 
+          $data->{'heading'}
+        ), 
+        "\n" unless $quite;
+  return web_post($config->{'u'}, $data);
+}
+
+sub web_post {
+  my $url=shift(); #full URL
+  my $data=shift(); #{}
+
+  #need better encoding
+  my $string=join "&", map {$_. "=".$data->{$_}} keys(%$data);
+
+  my $ua = LWP::UserAgent->new;
+  $ua->agent("gpsd-trackd/0.1"); # Create a request
+  my $req = HTTP::Request->new(POST=>$url);
+  $req->content_type("application/x-www-form-urlencoded");
+  $req->content($string);
+  my $res = $ua->request($req); # Check the outcome of the response
+
+  if ($res->is_success) {
+    print $res->content, "\n" if $debug > 1;
+  } else {
+    print "Error: ", $res->content, "\n";
+  }
+  return $res->is_success;
+}
+__END__
+$fix={ S=>[status (?,0,1,2)],
+       D=>[iso date time],
+       P=>[lat lon (WGS84)],
+     };

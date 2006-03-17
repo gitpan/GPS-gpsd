@@ -8,7 +8,7 @@ $port||=q{2947};
 my $gps=GPS::gpsd->new(host=>$host, port=>$port) || die("Error: Cannot connect to the gpsd server");
 
 print join("|", qw{status datetime . lat lon alt speed heading}), "\n";
-foreach (0..5) {
+while (1) {
   my $p=$gps->get();
   if ($p->fix) {
     print join("|", $p->status,
@@ -19,8 +19,7 @@ foreach (0..5) {
                      $p->speed,
                      $p->heading),
                      "\n";
-  } else {
-    print "No fix\n";
+    print join(":", @{$p->{'O'}}),"\n";
   }
   sleep 1;
 }

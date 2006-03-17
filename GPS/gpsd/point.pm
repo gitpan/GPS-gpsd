@@ -7,7 +7,7 @@ package GPS::gpsd::point;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.6} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.7} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -33,101 +33,118 @@ sub fix {
 
 sub status {
   my $self = shift();
+  if (@_) { $self->{'S'} ->[0] = shift() } #sets value
   return q2u $self->{'S'}->[0];
 }
 
 sub datetime {
   my $self = shift();
+  if (@_) { $self->{'D'} ->[0] = shift() } #sets value
   return q2u $self->{'D'}->[0];
 }
 
 sub tag {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[0] = shift() } #sets value
   return q2u $self->{'O'}->[0];
 }
 
 sub time {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[1] = shift() } #sets value
   return q2u $self->{'O'}->[1];
 }
 
 sub errortime {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[2] = shift() } #sets value
   return q2u $self->{'O'}->[2];
 }
 
 sub latitude {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[3] = shift() } #sets value
   return q2u $self->{'O'}->[3];
 }
 
 sub lat {
   my $self = shift();
-  return $self->latitude;
+  return $self->latitude(@_);
 }
 
 sub longitude {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[4] = shift() } #sets value
   return q2u $self->{'O'}->[4];
 }
 
 sub lon {
   my $self = shift();
-  return $self->longitude;
+  return $self->longitude(@_);
 }
 
 sub altitude {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[5] = shift() } #sets value
   return q2u $self->{'O'}->[5];
 }
 
 sub alt {
   my $self = shift();
-  return $self->altitude;
+  return $self->altitude(@_);
 }
 
 sub errorhorizontal {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[6] = shift() } #sets value
   return q2u $self->{'O'}->[6];
 }
 
 sub errorvertical {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[7] = shift() } #sets value
   return q2u $self->{'O'}->[7];
 }
 
 sub heading {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[8] = shift() } #sets value
   return q2u $self->{'O'}->[8];
 }
 
 sub speed {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[9] = shift() } #sets value
   return q2u $self->{'O'}->[9];
 }
 
 sub climb {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[10] = shift() } #sets value
   return q2u $self->{'O'}->[10];
 }
 
 sub errorheading {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[11] = shift() } #sets value
   return q2u $self->{'O'}->[11];
 }
 
 sub errorspeed {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[12] = shift() } #sets value
   return q2u $self->{'O'}->[12];
 }
 
 sub errorclimb {
   my $self = shift();
+  if (@_) { $self->{'O'} ->[13] = shift() } #sets value
   return q2u $self->{'O'}->[13];
 }
 
 sub mode {
   my $self = shift();
+  if (@_) { $self->{'M'} ->[0] = shift() } #sets value
   return q2u $self->{'M'}->[0];
 }
 

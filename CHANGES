@@ -1,5 +1,13 @@
 Revision history for GPS::gpsd
 
+2006-03-11 v0.7
+  * Fixes error in in the parse routine 
+     < $data{$1}=[split(/ /, $2)];
+     > $data{$1}=[split(/\s+/, $2)];
+  * Updates to CPAN install capabilitiy
+  * Updates to documentation
+  * Update to the subscribe interface
+
 2006-02-23 v0.6 (No user interface changes)
   * Updates the pod documentation so that it displays better on CPAN.
   * Moved code from GPS::gpsd::satellite->list to GPS::gpsd->getsatellitelist. 
@@ -17,7 +25,6 @@ Revision history for GPS::gpsd
   * Added Point object interface
 
 2006-02 v0.2 (Heavy user interface changes)
-  * Added
 
 2006-02 v0.1
   * Original version on CPAN.

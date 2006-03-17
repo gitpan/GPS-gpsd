@@ -7,11 +7,11 @@ package GPS::gpsd;
 use strict;
 use vars qw($VERSION);
 use IO::Socket;
-use Math::Trig;
+use Math::Trig qw{rad2deg deg2rad great_circle_distance great_circle_destination};
 use GPS::gpsd::point;
 use GPS::gpsd::satellite;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.6} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.7} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -27,7 +27,6 @@ sub initialize {
   my %param = @_;
   $self->host($param{'host'} || 'localhost');
   $self->port($param{'port'} || '2947');
-  $self->send($param{'send'} || 'SDOV');
   unless ($param{'do_not_init'}) { #for testing
     my $data=$self->retrieve('LKIFCB');
     foreach (keys %$data) {
@@ -41,10 +40,11 @@ sub subscribe {
   my %param = @_;
   my $last=undef();
   my $handler=$param{'handler'} || \&default_handler;
+  my $config=$param{'config'} || {};
   while (1) {
     my $point=$self->get();
     if (defined($point) and $point->fix) { #if gps fix
-      my $return=&{$handler}($last, $point);
+      my $return=&{$handler}($last, $point, $config);
       if ($return) {
         $last=$return;
       }
@@ -56,6 +56,7 @@ sub subscribe {
 sub default_handler {
   my $p1=shift(); #last true return or undef if first
   my $p2=shift(); #current fix
+  my $config=shift(); #configuration data
   if (defined($p1)) {
     if (rand(1) < 0.5) {
       print "\n",$p1->lat," ",$p1->lon," -> ",$p2->lat," ",$p2->lon,"\n";
@@ -86,8 +87,7 @@ sub getsatellitelist {
 
 sub get {
   my $self=shift();
-  my $string=$self->send();
-  my $data=$self->retrieve($string);
+  my $data=$self->retrieve('SDO');
   return GPS::gpsd::point->new($data);
 }
 
@@ -126,17 +126,11 @@ sub parse {
       if ($1 eq 'Y') {
         $data{$1}=[split(/:/, $2)]; #Y is : delimited
       } else {
-        $data{$1}=[split(/ /, $2)];
+        $data{$1}=[map {$_ eq '?' ? undef() : $_} split(/\s+/, $2)];
       }
     }
   }
   return \%data;
-}
-
-sub send {
-  my $self = shift();
-  if (@_) { $self->{'send'} = shift() } #sets value
-  return $self->{'send'};
 }
 
 sub port {
@@ -159,16 +153,22 @@ sub time {
   return abs($p2->time - $p1->time);
 }
 
+sub math2geo {
+  return rad2deg($_[0]), (rad2deg($_[1]));
+}
+
+sub geo2math {
+  return deg2rad($_[0]), deg2rad(90 - $_[1]);
+}
+
 sub distance {
   #meters between p1 and p2
   my $self=shift();
   my $p1=shift();
   my $p2=shift();
-  my $y1=$p1->lat;
-  my $x1=$p1->lon;
-  my $y2=$p2->lat;
-  my $x2=$p2->lon;
-  return sqrt(($x2-$x1)**2 + ($y2-$y1)**2) * 40075.16 / 360 * 1000;
+  my @P1 = geo2math( $p1->lat, $p1->lon);
+  my @P2 = geo2math( $p2->lat, $p2->lon);
+  return great_circle_distance(@P1, @P2, 6378000);
 }
 
 sub track {
@@ -176,16 +176,30 @@ sub track {
   my $self=shift();
   my $p1=shift();
   my $time=shift();
-  my $x1=$p1->lon;
-  my $y1=$p1->lat;
-  my $heading=$p1->heading;        #degrees from the North
-  my $speed=$p1->{'V'}->[0];          #knots; 1knot=1min/hr=1/3600 deg/sec
-  my $x1v=$x1 + sin(deg2rad($heading)) * $speed/3600 * $time;
-  my $y1v=$y1 + cos(deg2rad($heading)) * $speed/3600 * $time;
-  my $p1v=GPS::gpsd::point->new($p1);
-  $p1v->{'P'}=[$y1v, $x1v];  #Is there a better OO way to make assignments?
-  return $p1v;
+  my $speed=$p1->speed;              #m/s
+  my $distance=$speed * $time;       #meters
+  $distance=meter2rad($distance);    #radians
+
+  my ($thetad, $phid, $dird) =
+    great_circle_destination(geo2math($p1->lat, $p1->lon),
+                               $p1->heading, $distance);
+
+  my $p2=GPS::gpsd::point->new($p1);
+  my ($lat, $lon)=math2geo($thetad, $phid);
+  $p2->lat($lat);
+  $p2->lon($lon);
+  $p2->time($p1->time + $time);
+  $p2->heading($dird);
+  return $p2;
 }
+
+sub meter2rad {
+  my $m=shift();
+  my $e =(6378137 + 6356752.3142)/2;
+  return  2 * &PI * $m / $e;
+}
+
+sub PI {4 * atan2 1, 1;}
 
 sub baud {
   my $self = shift();
@@ -273,7 +287,7 @@ Fortunately, there are various methods that hide this hash from the user.
 
 Returns a new gps object.
 
-=item subscribe(\&sub)
+=item subscribe(handler=>\&sub, config=>{})
 
 Subscribes subroutine to call when a valid fix is obtained.  When the GPS receiver has a good fix this subroutine will be called every second.  The return (in v0.5 must be a ref) from this sub will be sent back as the first argument to the subroutine on the next call.
 

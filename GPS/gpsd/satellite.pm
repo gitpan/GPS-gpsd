@@ -7,7 +7,7 @@ package GPS::gpsd::satellite;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.6} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.7} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -29,36 +29,41 @@ sub initialize {
 
 sub prn {
   my $self = shift();
+  if (@_) { $self->{'prn'} = shift() } #sets value
   return $self->{'prn'};
 }
 
 sub elevation {
   my $self = shift();
+  if (@_) { $self->{'elevation'} = shift() } #sets value
   return $self->{'elevation'};
 }
 
 sub elev {
   my $self = shift();
-  return $self->elevation;
+  return $self->elevation(@_);
 }
 
 sub azimuth {
   my $self = shift();
+  if (@_) { $self->{'azimuth'} = shift() } #sets value
   return $self->{'azimuth'};
 }
 
 sub azim {
   my $self = shift();
-  return $self->azimuth;
+  return $self->azimuth(@_);
 }
 
 sub snr {
   my $self = shift();
+  if (@_) { $self->{'snr'} = shift() } #sets value
   return $self->{'snr'};
 }
 
 sub used {
   my $self = shift();
+  if (@_) { $self->{'used'} = shift() } #sets value
   return $self->{'used'};
 }
 

@@ -1,12 +1,21 @@
 #!/usr/bin/perl
 use strict;
 use GPS::gpsd;
-my $host = shift() || 'localhost';
+my ($host,$port)=split(q{:}, shift());
+$host||=q{localhost};
+$port||=q{2947};
 
-my $gps=GPS::gpsd->new(host=>$host) || die("Error: Cannot connect to the gpsd server");
+my $gps=GPS::gpsd->new(host=>$host, port=>$port) || die("Error: Cannot connect to the gpsd server");
+
 print join("|", qw{Type Status Lat Lon Alt Speed Heading}), "\n";
+my $config={
+             time=>5,       #seconds
+             distance=>100, #meters
+             track=>20      #meters
+           };
 
-$gps->subscribe(handler=>\&gpsd_handler);
+$gps->subscribe(handler=>\&gpsd_handler,
+                config=>$config);
 
 sub report {
   my $data=shift();
@@ -29,11 +38,7 @@ sub report {
 sub gpsd_handler {
   my $p1=shift(); #last true return or undef if first
   my $p2=shift(); #current fix
-  my $config={
-               time=>5,       #seconds
-               distance=>100, #meters
-               track=>20      #meters
-             };
+  my $config=shift();
   unless (defined($p1)) {
     return report({type=>"first", point=>$p2});
   } else {
