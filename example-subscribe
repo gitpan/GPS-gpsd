@@ -1,0 +1,13 @@
+#!/usr/bin/perl -w
+use strict;
+use lib q{lib};
+use GPS::gpsd;
+my ($host,$port)=split(q{:}, shift()||'');
+$host||=q{localhost};
+$port||=q{2947};
+
+my $gps=GPS::gpsd->new(host=>$host, port=>$port) || die("Error: Cannot connect to the gpsd server");
+
+$gps->subscribe();
+
+print "Note: Nothing after the subscribe will be executed.\n";
