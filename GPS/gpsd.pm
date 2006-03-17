@@ -11,7 +11,7 @@ use Math::Trig;
 use GPS::gpsd::point;
 use GPS::gpsd::satellite;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.4} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.5} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -28,27 +28,45 @@ sub initialize {
   $self->host($param{'host'} || 'localhost');
   $self->port($param{'port'} || '2947');
   $self->send($param{'send'} || 'SDOV');
-  my $data=$self->retrieve('LKIFCB');
-  foreach (keys %$data) {
-    $self->{$_}=$data->{$_};
+  unless ($param{'do_not_init'}) { #for testing
+    my $data=$self->retrieve('LKIFCB');
+    foreach (keys %$data) {
+      $self->{$_}=$data->{$_};
+    }
   }
 }
 
-sub register {
+sub subscribe {
   my $self = shift();
   my %param = @_;
-  my $handler=$param{'handler'} || die('Error: handler=>\&{} required');
-  my $filter=$param{'filter'} || sub{1};
+  my $last=undef();
+  my $handler=$param{'handler'} || \&default_handler;
   while (1) {
     my $point=$self->get();
     if (defined($point) and $point->fix) { #if gps fix
-      my $return=&{$filter}($point);
+      my $return=&{$handler}($last, $point);
       if ($return) {
-        &{$handler}({point=>$point,
-                     return=>$return});
-        sleep 1; 
+        $last=$return;
       }
     }
+    sleep 1; 
+  }
+}
+
+sub default_handler {
+  my $p1=shift(); #last true return or undef if first
+  my $p2=shift(); #current fix
+  if (defined($p1)) {
+    if (rand(1) < 0.5) {
+      print "\n",$p1->lat," ",$p1->lon," -> ",$p2->lat," ",$p2->lon,"\n";
+      return $p2;
+    } else {
+      {local $|=1; print ".";}
+      return undef();
+    }
+  } else {
+    print "First: ",$p2->lat," ",$p2->lon,"\n";
+    return $p2;
   }
 }
 
@@ -192,7 +210,7 @@ sub protocol {
   return q2u $self->{'L'}->[0];
 }
 
-sub server {
+sub daemon {
   my $self = shift();
   return q2u $self->{'L'}->[1];
 }
@@ -207,49 +225,41 @@ sub q2u {
   return $a eq '?' ? undef() : $a;
 }
 
-
 1;
 __END__
 
 =head1 NAME
 
-  GPS::gpsd is a module that provides a perl interface to the gpsd daemon. gpsd is an open source gps deamon from http://gpsd.berlios.de/.
+GPS::gpsd is a module that provides a perl interface to the gpsd
+daemon. gpsd is an open source gps deamon from http://gpsd.berlios.de/.
 
 =head1 SYNOPSIS
 
-  use GPS::gpsd;
-  $gps = new GPS::gpsd(  host    => 'localhost',
-	  		 port      => 2947
-                );
-  my $fix=$gps->get();
+use GPS::gpsd;
+$gps=new GPS::gpsd();
+my $point=$gps->get();
+print $point->lat, " ", $point->lon, "\n";
 
-  or
+or
 
-  use GPS::gpsd;
-  $gps->register(handler=>\&gps_handler);
-  sub gps_handler {
-    my $data=shift();
-    print "Lat:". $data->{'P'}->[0]. " Lon:". $data->{'P'}->[1]. "\n";
-  }
-
+use GPS::gpsd;
+$gps=new GPS::gpsd();
+$gps->subscribe();
 
 =head1 DESCRIPTION
 
-  GPS::gpsd provides a very simple interface to gpsd daemon in perl scripts.
+GPS::gpsd provides a very simple interface to gpsd daemon in perl scripts.
  
-  For example the method get() returns a hash reference like
-                     {S=>[?|0|1|2],
-                      P=>[lat,lon]}
+For example the method get() returns a hash reference like
+        {S=>[?|0|1|2], P=>[lat,lon]}
 
-  Unfortunately you'll still need to know the single character protocol of the gpsd daemon.
+Fortunately, there are various methods that hide this hash from the user.
 
 =over
 
 =head1 GETTING STARTED
 
 =head1 KNOWN LIMITATIONS
-
-  The subroutine registration could use some more work.  I'd like to add a min time, max time, position tolerance and tracking tolerance capabilities.
 
 =head1 BUGS
 
@@ -262,8 +272,7 @@ use strict;
 use lib './';
 use GPS::gpsd;
 
-my $gps=GPS::gpsd->new(host=>'192.168.33.130',
-                       port=>2947);
+my $gps=GPS::gpsd->new();
 my $data=$gps->get();
 my %fix=('?'=>"Error", 0=>"No Fix", 1=>"Fix", 2=>"DGPS-Corrected Fix");
 print "gpsd.pm Version:", $gps->VERSION, "\n";
@@ -272,11 +281,12 @@ print "Fix:", $data->{'S'}->[0], "=", $fix{$data->{'S'}->[0]}, "\n";
 print "Lat:", $data->{'P'}->[0], " Lon:", $data->{'P'}->[1], "\n";
 print "Host:", $gps->host, " Port:", $gps->port, "\n";
 
-$gps->register(handler=>\&gps_handler);
+$gps->subscribe(handler=>\&gps_handler);
 
 sub gps_handler {
-  my $data=shift();
-  print join " ", "Fix", $data->{'S'}->[0], $data->{'P'}->[0], $data->{'P'}->[1], "\n";
+  my $point=shift();
+  print join " ", "Fix", $point->{'S'}->[0], $point->{'P'}->[0], $point->{'P'}->[1], "\n";
+  return $point
 }
 
 =head1 AUTHOR

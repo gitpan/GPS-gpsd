@@ -1,0 +1,11 @@
+#!/usr/bin/perl
+use strict;
+use GPS::gpsd;
+my $host = shift() || 'localhost';
+
+my $gps=GPS::gpsd->new(host=>$host) || die("Error: Cannot connect to the gpsd server");
+
+print "gpsd.pm Version:\t", $gps->VERSION, "\n";
+print "gpsd Version:\t", $gps->daemon, "\n";
+print "gpsd Commands:\t", $gps->commands, "\n";
+print "Host:\t", $gps->host, " Port:\t", $gps->port, "\n";

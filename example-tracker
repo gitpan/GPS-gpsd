@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+use strict;
+use GPS::gpsd;
+my $host = shift() || 'localhost';
+
+my $gps=GPS::gpsd->new(host=>$host) || die("Error: Cannot connect to the gpsd server");
+print join("|", qw{Type Status Lat Lon Alt Speed Heading}), "\n";
+
+$gps->subscribe(handler=>\&gpsd_handler);
+
+sub report {
+  my $data=shift();
+  my $point=$data->{'point'};
+  print join "|", $data->{'type'},
+                  $point->status,
+                  $point->lat,
+                  $point->lon,
+                  $point->alt,
+                  $point->speed,
+                  $point->heading,
+                  "\n";
+  if ("Success") {
+    return $point;
+  } else {
+    return undef();
+  }
+}
+
+sub gpsd_handler {
+  my $p1=shift(); #last true return or undef if first
+  my $p2=shift(); #current fix
+  my $config={
+               time=>5,       #seconds
+               distance=>100, #meters
+               track=>20      #meters
+             };
+  unless (defined($p1)) {
+    return report({type=>"first", point=>$p2});
+  } else {
+    if ($gps->time($p1, $p2) > $config->{'time'}) {
+      return report({type=>"time", point=>$p2});
+    } else {
+      if ($gps->distance($p1, $p2) > $config->{'distance'}) {
+        return report({type=>"distance", point=>$p2});
+      } else {
+        if ($gps->distance($gps->track($p1, $gps->time($p1,$p2)), $p2)
+              > $config->{'track'}) {
+          return report({type=>"track", point=>$p2});
+        } else {
+          return undef();
+        }
+      }
+    }
+  }
+}

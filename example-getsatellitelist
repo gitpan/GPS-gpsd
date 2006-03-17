@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 use strict;
 use GPS::gpsd;
+my $host = shift() || 'localhost';
 
-my $gps=GPS::gpsd->new(host=>'192.168.33.130');
-print "gpsd.pm Version:", $gps->VERSION, "\n";
+my $gps=GPS::gpsd->new(host=>$host) || die("Error: Cannot connect to the gpsd server");
 
 my $i=0;
 print join("\t", qw{Count PRN ELEV Azim SNR USED}), "\n";
