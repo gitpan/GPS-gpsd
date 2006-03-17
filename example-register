@@ -1,20 +1,65 @@
 #!/usr/bin/perl
 use strict;
-use lib './perl-GPS-gpsd-0.3';
 use GPS::gpsd;
+use vars qw{$last $config};
+
+$last=undef();
+$config={
+          time=>5,       #seconds
+          distance=>100, #meters
+          track=>20      #meters
+        };
+my $pass={last=>$last,
+          config=>$config};
 
 my $gps=GPS::gpsd->new(host=>'192.168.33.130');
-my $point=$gps->get();
-print "gpsd.pm Version:", $gps->VERSION, "\n";
-print "gpsd Version:", $gps->server, "\n";
-print "gpsd Commands:", $gps->commands, "\n";
-print "Status:", $point->status, "\n";
-print "Lat:", $point->lat, " Lon:", $point->lon, "\n";
-print "Host:", $gps->host, " Port:", $gps->port, "\n";
+print "gpsd.pm Version:\t", $gps->VERSION, "\n";
+print "gpsd Version:\t", $gps->server, "\n";
+print "gpsd Commands:\t", $gps->commands, "\n";
+print "Host:\t", $gps->host, " Port:\t", $gps->port, "\n";
+print join("|", qw{Type Status Lat Lon Alt Speed Heading}), "\n";
 
-$gps->register(sub=>\&gpsd_handler);
+$gps->register(handler=>\&gpsd_handler,
+               filter=>\&gpsd_filter);
+
+print "Note: Nothing after the register call will be executed\n";
 
 sub gpsd_handler {
-  my $p=shift();
-  print join " ", "Fix", $p->status, $p->lat, $p->lon, "\n";
+  my $data=shift();
+  my $point=$data->{'point'};
+  my $return=$data->{'return'};
+  print join "|", $return->{'type'},
+                  $point->status,
+                  $point->lat,
+                  $point->lon,
+                  $point->alt,
+                  $point->speed,
+                  $point->heading,
+                  "\n";
+  $last=$point;
+}
+
+sub gpsd_filter {
+  #Not sure how to pass data into this proceedure other than via
+  #global vars since we are being called via a module
+  my $p1=$last;
+  my $p2=shift();
+  unless (defined($p1)) {
+    return {type=>"first"};
+  } else {
+    if ($gps->time($p1, $p2) > $config->{'time'}) {
+      return {type=>"time"};
+    } else {
+      if ($gps->distance($p1, $p2) > $config->{'distance'}) {
+        return {type=>"distance"};
+      } else {
+        if ($gps->distance($gps->track($p1, $gps->time($p1,$p2)), $p2)
+              > $config->{'track'}) {
+          return {type=>"track"};
+        } else {
+          return undef();
+        }
+      }
+    }
+  }
 }

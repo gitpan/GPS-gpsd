@@ -9,8 +9,9 @@ use vars qw($VERSION);
 use IO::Socket;
 use Math::Trig;
 use GPS::gpsd::point;
+use GPS::gpsd::satellite;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.3} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.4} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -27,7 +28,7 @@ sub initialize {
   $self->host($param{'host'} || 'localhost');
   $self->port($param{'port'} || '2947');
   $self->send($param{'send'} || 'SDOV');
-  my $data=$self->getserverdata('LKIFCB');
+  my $data=$self->retrieve('LKIFCB');
   foreach (keys %$data) {
     $self->{$_}=$data->{$_};
   }
@@ -36,47 +37,45 @@ sub initialize {
 sub register {
   my $self = shift();
   my %param = @_;
-  my $sub=$param{'sub'} || die('Error: sub=>\&{} required');
+  my $handler=$param{'handler'} || die('Error: handler=>\&{} required');
   my $filter=$param{'filter'} || sub{1};
   while (1) {
     my $point=$self->get();
-    if ($point->fix) { #if gps fix
-      if (&{$filter}($point)) {
-        &{$sub}($point);
+    if (defined($point) and $point->fix) { #if gps fix
+      my $return=&{$filter}($point);
+      if ($return) {
+        &{$handler}({point=>$point,
+                     return=>$return});
         sleep 1; 
       }
     }
   }
 }
 
-sub getserverdata {
+sub getsatellitelist {
   my $self=shift();
-  my $send=shift();
-  my $sock=$self->open();
-  my $data='';
-  if (defined($sock)) {
-    $sock->send($send) or die("Error: $!");
-    $sock->recv($data, 256); #Not sure if 256 is good here!
-    chomp $data;
-    return $self->parse($data);
-  } else {
-    print "$0: Could not connect to gspd host.\n";
-    return undef();
-  }
+  my $string='Y';
+  my $data=$self->retrieve($string);
+  return GPS::gpsd::satellite->list($data);
 }
-
 
 sub get {
   my $self=shift();
+  my $string=$self->send();
+  my $data=$self->retrieve($string);
+  return GPS::gpsd::point->new($data);
+}
+
+sub retrieve {
+  my $self=shift();
+  my $string=shift();
   my $sock=$self->open();
   my $data='';
   if (defined($sock)) {
-    $sock->send($self->send()) or die("Error: $!");
+    $sock->send($string) or die("Error: $!");
     $sock->recv($data, 256); #Not sure if 256 is good here!
     chomp $data;
-    #return $self->parse($data);
-    my $point=GPS::gpsd::point->new($self->parse($data));
-    return $point;
+    return $self->parse($data);
   } else {
     print "$0: Could not connect to gspd host.\n";
     return undef();
@@ -99,7 +98,11 @@ sub parse {
   my @line=split(/[,\n\r]/, $line);  
   foreach (@line) {
     if (m/(.*)=(.*)/) {
-      $data{$1}=[split(/ /, $2)];
+      if ($1 eq 'Y') {
+        $data{$1}=[split(/:/, $2)]; #Y is : delimited
+      } else {
+        $data{$1}=[split(/ /, $2)];
+      }
     }
   }
   return \%data;
@@ -144,18 +147,17 @@ sub distance {
 }
 
 sub track {
-  #return calculated point of $p1 at time $p2 assuming constant velocity
+  #return calculated point of $p1 in time assuming constant velocity
   my $self=shift();
   my $p1=shift();
-  my $p2=shift();
+  my $time=shift();
   my $x1=$p1->lon;
   my $y1=$p1->lat;
   my $heading=$p1->heading;        #degrees from the North
   my $speed=$p1->{'V'}->[0];          #knots; 1knot=1min/hr=1/3600 deg/sec
-  my $time=$self->time($p1,$p2);
   my $x1v=$x1 + sin(deg2rad($heading)) * $speed/3600 * $time;
   my $y1v=$y1 + cos(deg2rad($heading)) * $speed/3600 * $time;
-  my $p1v={%$p1};
+  my $p1v=GPS::gpsd::point->new($p1);
   $p1v->{'P'}=[$y1v, $x1v];  #Is there a better OO way to make assignments?
   return $p1v;
 }
@@ -224,7 +226,7 @@ __END__
   or
 
   use GPS::gpsd;
-  $gps->register(sub=>\&gps_handler);
+  $gps->register(handler=>\&gps_handler);
   sub gps_handler {
     my $data=shift();
     print "Lat:". $data->{'P'}->[0]. " Lon:". $data->{'P'}->[1]. "\n";
@@ -270,7 +272,7 @@ print "Fix:", $data->{'S'}->[0], "=", $fix{$data->{'S'}->[0]}, "\n";
 print "Lat:", $data->{'P'}->[0], " Lon:", $data->{'P'}->[1], "\n";
 print "Host:", $gps->host, " Port:", $gps->port, "\n";
 
-$gps->register(sub=>\&gps_handler);
+$gps->register(handler=>\&gps_handler);
 
 sub gps_handler {
   my $data=shift();

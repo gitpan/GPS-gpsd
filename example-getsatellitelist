@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+use strict;
+use GPS::gpsd;
+
+my $gps=GPS::gpsd->new(host=>'192.168.33.130');
+print "gpsd.pm Version:", $gps->VERSION, "\n";
+
+my $i=0;
+print join("\t", qw{Count PRN ELEV Azim SNR USED}), "\n";
+foreach ($gps->getsatellitelist) {
+  print join "\t", ++$i,
+                   $_->prn,
+                   $_->elev,
+                   $_->azim,
+                   $_->snr,
+                   $_->used;
+  print "\n";
+}

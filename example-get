@@ -1,17 +1,24 @@
 #!/usr/bin/perl
 use strict;
-use lib './perl-GPS-gpsd-0.3';
 use GPS::gpsd;
 
 my $gps=GPS::gpsd->new(host=>'192.168.33.130');
 print "gpsd.pm Version:", $gps->VERSION, "\n";
 
+print join("|", qw{status datetime . lat lon alt speed heading}), "\n";
 foreach (0..5) {
   my $p=$gps->get();
-  print join " | ", $p->status,
-                    $p->time,
-                    $p->lat,
-                    $p->lon,
-                    $p->alt, "\n";
+  if ($p->fix) {
+    print join("|", $p->status,
+                     $p->datetime,
+                     $p->lat,
+                     $p->lon,
+                     $p->alt,
+                     $p->speed,
+                     $p->heading),
+                     "\n";
+  } else {
+    print "No fix\n";
+  }
   sleep 1;
 }
