@@ -7,10 +7,10 @@ package GPS::gpsd;
 use strict;
 use vars qw($VERSION);
 use IO::Socket;
-use HTTP::Date;
 use Math::Trig;
+use GPS::gpsd::point;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.2} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.3} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -26,37 +26,57 @@ sub initialize {
   my %param = @_;
   $self->host($param{'host'} || 'localhost');
   $self->port($param{'port'} || '2947');
-  $self->send($param{'send'} || 'SDPTVAE');
-  #I allow the user to set the send property.  However, SDPTV are required
-  #by built in functions
+  $self->send($param{'send'} || 'SDOV');
+  my $data=$self->getserverdata('LKIFCB');
+  foreach (keys %$data) {
+    $self->{$_}=$data->{$_};
+  }
 }
 
 sub register {
   my $self = shift();
   my %param = @_;
   my $sub=$param{'sub'} || die('Error: sub=>\&{} required');
-  my $filter=$param{'filter'} || \&{1};
+  my $filter=$param{'filter'} || sub{1};
   while (1) {
-    my $data=$self->get();
-    if ($data->{'S'}->[0] > 0) { #if gps fix
-      if (&{$filter}($data)) {   #if true filter
-        &{$sub}($data);
+    my $point=$self->get();
+    if ($point->fix) { #if gps fix
+      if (&{$filter}($point)) {
+        &{$sub}($point);
         sleep 1; 
       }
     }
   }
 }
 
+sub getserverdata {
+  my $self=shift();
+  my $send=shift();
+  my $sock=$self->open();
+  my $data='';
+  if (defined($sock)) {
+    $sock->send($send) or die("Error: $!");
+    $sock->recv($data, 256); #Not sure if 256 is good here!
+    chomp $data;
+    return $self->parse($data);
+  } else {
+    print "$0: Could not connect to gspd host.\n";
+    return undef();
+  }
+}
+
+
 sub get {
   my $self=shift();
   my $sock=$self->open();
   my $data='';
-
   if (defined($sock)) {
     $sock->send($self->send()) or die("Error: $!");
     $sock->recv($data, 256); #Not sure if 256 is good here!
     chomp $data;
-    return $self->parse($data);
+    #return $self->parse($data);
+    my $point=GPS::gpsd::point->new($self->parse($data));
+    return $point;
   } else {
     print "$0: Could not connect to gspd host.\n";
     return undef();
@@ -108,9 +128,7 @@ sub time {
   my $self=shift();
   my $p1=shift();
   my $p2=shift();
-  my $d1=str2time($p1->{'D'}->[0]);
-  my $d2=str2time($p2->{'D'}->[0]);
-  return abs($d2-$d1);
+  return abs($p2->time - $p1->time);
 }
 
 sub distance {
@@ -118,10 +136,10 @@ sub distance {
   my $self=shift();
   my $p1=shift();
   my $p2=shift();
-  my $x1=$p1->{'P'}->[1];
-  my $y1=$p1->{'P'}->[0];
-  my $x2=$p2->{'P'}->[1];
-  my $y2=$p2->{'P'}->[0];
+  my $y1=$p1->lat;
+  my $x1=$p1->lon;
+  my $y2=$p2->lat;
+  my $x2=$p2->lon;
   return sqrt(($x2-$x1)**2 + ($y2-$y1)**2) * 40075.16 / 360 * 1000;
 }
 
@@ -130,17 +148,63 @@ sub track {
   my $self=shift();
   my $p1=shift();
   my $p2=shift();
-  my $x1=$p1->{'P'}->[1];
-  my $y1=$p1->{'P'}->[0];
-  my $heading=$p1->{'T'}->[0];        #degrees from the North
+  my $x1=$p1->lon;
+  my $y1=$p1->lat;
+  my $heading=$p1->heading;        #degrees from the North
   my $speed=$p1->{'V'}->[0];          #knots; 1knot=1min/hr=1/3600 deg/sec
   my $time=$self->time($p1,$p2);
   my $x1v=$x1 + sin(deg2rad($heading)) * $speed/3600 * $time;
   my $y1v=$y1 + cos(deg2rad($heading)) * $speed/3600 * $time;
   my $p1v={%$p1};
-  $p1v->{'P'}=[$y1v, $x1v];
+  $p1v->{'P'}=[$y1v, $x1v];  #Is there a better OO way to make assignments?
   return $p1v;
 }
+
+sub baud {
+  my $self = shift();
+  return q2u $self->{'B'}->[0];
+}
+
+sub rate {
+  my $self = shift();
+  return q2u $self->{'C'}->[0];
+}
+
+sub device {
+  my $self = shift();
+  return q2u $self->{'F'}->[0];
+}
+
+sub identification {
+  my $self = shift();
+  return q2u $self->{'I'}->[0];
+}
+
+sub id {
+  my $self = shift();
+  return $self->identification;
+}
+
+sub protocol {
+  my $self = shift();
+  return q2u $self->{'L'}->[0];
+}
+
+sub server {
+  my $self = shift();
+  return q2u $self->{'L'}->[1];
+}
+
+sub commands {
+  my $self = shift();
+  return q2u $self->{'L'}->[2];
+}
+
+sub q2u {
+  my $a=shift();
+  return $a eq '?' ? undef() : $a;
+}
+
 
 1;
 __END__

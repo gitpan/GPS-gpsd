@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+use strict;
+use lib './perl-GPS-gpsd-0.3';
+use GPS::gpsd;
+
+my $gps=GPS::gpsd->new(host=>'192.168.33.130');
+print "gpsd.pm Version:", $gps->VERSION, "\n";
+
+foreach (0..5) {
+  my $p=$gps->get();
+  print join " | ", $p->status,
+                    $p->time,
+                    $p->lat,
+                    $p->lon,
+                    $p->alt, "\n";
+  sleep 1;
+}
