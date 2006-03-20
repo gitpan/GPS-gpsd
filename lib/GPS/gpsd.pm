@@ -10,7 +10,7 @@ use IO::Socket;
 use GPS::gpsd::Point;
 use GPS::gpsd::Satellite;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.9} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;

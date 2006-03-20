@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use lib q{lib};
+use lib q{../lib};
 use GPS::gpsd;
 use Getopt::Std;
 use GPS::gpsd::Report::http;
