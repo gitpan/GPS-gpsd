@@ -1,4 +1,11 @@
 #!/usr/bin/perl -w
+
+=head1 NAME
+
+example-tracker - GPS::gpsd subscribe method example with custom handler this verson filters gpsd data at 5 seconds, a distance change of more than 100 meters or a track change of more than 20 meters.
+
+=cut
+
 use strict;
 use lib q{../lib};
 use GPS::gpsd;
@@ -17,25 +24,6 @@ my $config={
 
 $gps->subscribe(handler=>\&gpsd_handler,
                 config=>$config);
-
-sub report {
-  my $data=shift();
-  my $point=$data->{'point'};
-  print join "|", map {defined $_?$_:''}
-                  $data->{'type'},
-                  $point->status,
-                  $point->lat,
-                  $point->lon,
-                  $point->alt,
-                  $point->speed,
-                  $point->heading,
-                  "\n";
-  if ("Success") {
-    return $point;
-  } else {
-    return undef();
-  }
-}
 
 sub gpsd_handler {
   my $p1=shift(); #last true return or undef if first
@@ -58,5 +46,24 @@ sub gpsd_handler {
         }
       }
     }
+  }
+}
+
+sub report {
+  my $data=shift();
+  my $point=$data->{'point'};
+  print join "|", map {defined $_?$_:''}
+                  $data->{'type'},
+                  $point->status,
+                  $point->lat,
+                  $point->lon,
+                  $point->alt,
+                  $point->speed,
+                  $point->heading,
+                  "\n";
+  if ("Success") {
+    return $point;
+  } else {
+    return undef();
   }
 }

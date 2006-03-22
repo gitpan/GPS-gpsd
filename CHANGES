@@ -1,5 +1,16 @@
 Revision history for GPS::gpsd
 
+2006-03-21 v0.11
+  * simplified gpsd.pm default_handler
+  * pods for ./bin/ examples
+  * hopefully fixed META.yml error
+
+2006-03-19 v0.10
+  * moved examples to ./bin/ folder
+
+2006-03-17 v0.9
+  * fixed 1 warning
+
 2006-03-15 v0.8
   * CPAN changes.  Now automakes with CPAN!
   * moved Report::http under gpsd namespace
@@ -7,6 +18,7 @@ Revision history for GPS::gpsd
   * renamed tgz file to GPS-gpsd-X.XX.tgz format
 
 2006-03-11 v0.7
+  * made a bunch of changes to the distance calculations
   * Fixes error in in the parse routine 
      < $data{$1}=[split(/ /, $2)];
      > $data{$1}=[split(/\s+/, $2)];

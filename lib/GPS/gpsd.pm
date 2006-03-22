@@ -10,7 +10,7 @@ use IO::Socket;
 use GPS::gpsd::Point;
 use GPS::gpsd::Satellite;
 
-$VERSION = sprintf("%d.%02d", q{Revision: 0.10} =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q{Revision: 0.11} =~ /(\d+)\.(\d+)/);
 
 sub new {
   my $this = shift;
@@ -56,18 +56,8 @@ sub default_handler {
   my $p1=shift(); #last true return or undef if first
   my $p2=shift(); #current fix
   my $config=shift(); #configuration data
-  if (defined($p1)) {
-    if (rand(1) < 0.5) {
-      print "\n",$p1->lat," ",$p1->lon," -> ",$p2->lat," ",$p2->lon,"\n";
-      return $p2;
-    } else {
-      {local $|=1; print ".";}
-      return undef();
-    }
-  } else {
-    print "First: ",$p2->lat," ",$p2->lon,"\n";
-    return $p2;
-  }
+  print $p2->lat, " ", $p2->lon,"\n";
+  return $p2;
 }
 
 sub getsatellitelist {

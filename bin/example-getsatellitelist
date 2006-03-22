@@ -1,4 +1,12 @@
 #!/usr/bin/perl -w
+
+=head1 NAME
+
+example-getsatellitelist - GPS::gpsd getsatellitelist method example
+
+=cut
+
+
 use strict;
 use lib q{../lib};
 use GPS::gpsd;
