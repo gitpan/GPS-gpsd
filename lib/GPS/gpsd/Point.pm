@@ -22,7 +22,7 @@ sub initialize {
   my $self = shift();
   my $data = shift();
   foreach (keys %$data) {
-    $self->{$_}=$data->{$_};
+    $self->{$_}=[@{$data->{$_}}]; #there has got to be a better way to do this...
   }
 }
 

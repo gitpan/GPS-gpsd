@@ -29,7 +29,7 @@ sub initialize {
   unless ($param{'do_not_init'}) { #for testing
     my $data=$self->retrieve('LKIFCB');
     foreach (keys %$data) {
-      $self->{$_}=$data->{$_};
+      $self->{$_}=[@{$data->{$_}}]; #there has got to be a better way to do this...
     }
   }
 }
@@ -44,7 +44,7 @@ sub subscribe {
     my $point=$self->get();
     if (defined($point) and $point->fix) { #if gps fix
       my $return=&{$handler}($last, $point, $config);
-      if ($return) {
+      if (defined($return)) {
         $last=$return;
       }
     }

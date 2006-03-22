@@ -15,7 +15,7 @@ $port||=q{2947};
 
 my $gps=GPS::gpsd->new(host=>$host, port=>$port) || die("Error: Cannot connect to the gpsd server");
 
-print join("|", qw{Type Status Lat Lon Alt Speed Heading}), "\n";
+print join("|", qw{Type Status Time Lat Lon Alt Speed Heading}), "\n";
 my $config={
              time=>5,       #seconds
              distance=>100, #meters
@@ -30,18 +30,25 @@ sub gpsd_handler {
   my $p2=shift(); #current fix
   my $config=shift();
   unless (defined($p1)) {
-    return report({type=>"first", point=>$p2});
+    report({type=>"first", point=>$p2});
+    return $p2;
   } else {
-    if ($gps->time($p1, $p2) > $config->{'time'}) {
-      return report({type=>"time", point=>$p2});
+    my $time_delta=$gps->time($p1, $p2);
+    if ($time_delta > $config->{'time'}) {
+      report({type=>"time", point=>$p2});
+      return $p2;
     } else {
-      if ($gps->distance($p1, $p2) > $config->{'distance'}) {
-        return report({type=>"distance", point=>$p2});
+      my $distance_delta=$gps->distance($p1, $p2);
+      if ($distance_delta > $config->{'distance'}) {
+        report({type=>"distance", point=>$p2});
+        return $p2;
       } else {
-        if ($gps->distance($gps->track($p1, $gps->time($p1,$p2)), $p2)
-              > $config->{'track'}) {
-          return report({type=>"track", point=>$p2});
+        my $track_delta=$gps->distance($gps->track($p1, $gps->time($p1,$p2)), $p2);
+        if ($track_delta > $config->{'track'}) {
+          report({type=>"track", point=>$p2});
+          return $p2;
         } else {
+          print "filtered\n";
           return undef();
         }
       }
@@ -55,6 +62,7 @@ sub report {
   print join "|", map {defined $_?$_:''}
                   $data->{'type'},
                   $point->status,
+                  $point->time,
                   $point->lat,
                   $point->lon,
                   $point->alt,

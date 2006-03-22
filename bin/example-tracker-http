@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-example-tracker-http - GPS::gpsd get method example
+example-tracker-http - GPS::gpsd::Report::http example
 
 =cut
 
@@ -24,7 +24,7 @@ print "Device:", $opt->{'i'}, " - $host:$port\n";
 
 my $gps=GPS::gpsd->new(host=>$host, port=>$port) || die("Error: Cannot connect to the gpsd server");
 
-print join("|", qw{Type Status Lat Lon Alt Speed Heading}), "\n";
+print join("|", qw{Type Status Time Lat Lon Alt Speed Heading}), "\n";
 my $config={
             time=>5,              #seconds
             distance=>100,        #meters
@@ -41,6 +41,7 @@ sub report {
   print join "|", map {defined $_?$_:''} 
                   $config->{'type'},
                   $point->status,
+                  $point->time,
                   $point->lat,
                   $point->lon,
                   $point->alt,

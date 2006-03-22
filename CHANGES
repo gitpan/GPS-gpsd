@@ -1,5 +1,10 @@
 Revision history for GPS::gpsd
 
+2006-03-22 v0.12
+  * Error in point copy for initialization
+    < $self->{$_}=$data->{$_};
+    > $self->{$_}=[@{$data->{$_}}];
+
 2006-03-21 v0.11
   * simplified gpsd.pm default_handler
   * pods for ./bin/ examples
@@ -22,7 +27,7 @@ Revision history for GPS::gpsd
   * Fixes error in in the parse routine 
      < $data{$1}=[split(/ /, $2)];
      > $data{$1}=[split(/\s+/, $2)];
-  * Updates to CPAN install capabilitiy
+  * Updates to CPAN install capability
   * Updates to documentation
   * Update to the subscribe interface
 
