@@ -1,5 +1,8 @@
 Revision history for GPS::gpsd
 
+2006-03-22 v0.13
+  * Internel version numbers were wrong
+
 2006-03-22 v0.12
   * Error in point copy for initialization
     < $self->{$_}=$data->{$_};
